@@ -18,7 +18,6 @@ from Sutton and Barto’s Blackjack example.
 """
 from collections import defaultdict
 import itertools as it
-import logging
     
 import numpy as np
 from scipy.stats import rv_discrete
@@ -29,17 +28,14 @@ from question1 import (
     STICK,
     ACTIONS,
     step,
-    is_terminal,
+    LOSE,
     draw_from_deck_with_replacement,
 )
-
-_logger = logging.getLogger(__name__)
 
 
 def _generate_initial_state():
     # Returns a random initial game state, ie. dealer's show card and initial player card
     d, p = draw_from_deck_with_replacement(True), draw_from_deck_with_replacement(True)
-    _logger.log(logging.DEBUG, 'Initial draw: {0:s}'.format(str((d, p))))
     return d, p
 
 
@@ -57,31 +53,30 @@ def _draw_action(s, policy):
     return policy.items[action_dist.rvs(size=1)[0]]
 
 
-def generate_episode(policy):
-    s = _generate_initial_state()
+def _generate_episode(policy):
     episode = []
-    game_ended = False
-    while not game_ended:
-        _logger.log(logging.DEBUG, 'State before: {0:s}'.format(str(s)))
-        a = _draw_action(s, policy)
-        _logger.log(logging.DEBUG, 'Action: {0:s}'.format(a))
+    s = _generate_initial_state()
+    a = _draw_action(s, policy)
+    while True:
         s1, r = step(s, a)
         episode.append((s, a, r))
-        game_ended = (a == STICK) or is_terminal(s1)
+        if a == STICK or r == LOSE:
+            break
         s = s1
+        a = _draw_action(s, policy)
     return episode
 
 
 class Easy21MCControl(object):
 
-    def __init__(self, T=100000, N0=100.0):
+    def __init__(self, T=100000, N0=100.0, alpha0=0.1):
         self.T = T
         self.N0 = N0
         self.policy = _generate_initial_policy()
         self.N = defaultdict(int)
         self.Q = pd.Panel.from_dict({HIT: pd.DataFrame(index=range(1, 11), columns=range(1, 22), data=0.0),
                                      STICK: pd.DataFrame(index=range(1, 11), columns=range(1, 22), data=0.0)})
-        self.alpha = defaultdict(lambda: next(it.repeat(1.0)))
+        self.alpha = defaultdict(lambda: next(it.repeat(alpha0)))
         self.eta = defaultdict(lambda: next(it.repeat(N0)))
         self.V = defaultdict(float)
 
@@ -105,10 +100,8 @@ class Easy21MCControl(object):
     def run(self):
         t = 0
         while t < self.T:
-            if t % 10000 == 0:
-                _logger.log(logging.INFO, 't: {0:d}'.format(t))
             # Generate an episode and extract the (terminal) reward
-            episode = generate_episode(self.policy)
+            episode = _generate_episode(self.policy)
             _, _, reward = episode[-1]
 
             # Update state
@@ -131,6 +124,6 @@ class Easy21MCControl(object):
 
 
 if __name__ == '__main__':
-    easy21MCC = Easy21MCControl(T=100000)
+    easy21MCC = Easy21MCControl(T=10000, N0=100)
     easy21MCC.run()
     print(easy21MCC.V)
