@@ -16,20 +16,9 @@ and return the final reward and terminal state.
 
                                                                           10 marks
 """
-from scipy.stats import rv_discrete
+import random as rd
 
-_BLACK = 'B'
-_RED = 'R'
-
-_suits = (_RED, _BLACK)
-_suit_probs = {_RED: 1.0/3.0}
-_suit_probs[_BLACK] = 1.0 - _suit_probs[_RED]
-_card_numbers = range(1, 11)
-
-_card_number_dist = rv_discrete(values=(range(len(_card_numbers)), [1.0/len(_card_numbers)]*len(_card_numbers)),
-                                name='Easy21 Card Number Distribution')
-_suit_dist = rv_discrete(values=(range(len(_suits)), [_suit_probs[_suits[0]], _suit_probs[_suits[1]]]),
-                         name='Easy21 Suit Distribution')
+from constants import *
 
 
 def draw_from_deck_with_replacement(initial=False):
@@ -40,26 +29,10 @@ def draw_from_deck_with_replacement(initial=False):
                     draw a card from the full deck, always with replacement.
     :return: a card value drawn randomly with replacement from the deck
     """
-    draw = _card_numbers[_card_number_dist.rvs(size=1)[0]]
+    draw = rd.randint(1, NUMBER_OF_CARDS)
     if not initial:
-        suit = _suits[_suit_dist.rvs(size=1)[0]]
-        draw *= (1 if suit == _BLACK else -1)
+        draw *= -1 if rd.random() < RED_PROBABILITY else 1.0
     return draw
-
-
-# Game reward values
-WIN = 1
-DRAW = 0
-LOSE = -1
-
-# Player game actions
-HIT = 'hit'
-STICK = 'stick'
-ACTIONS = (HIT, STICK)
-
-
-def _is_busted(score):
-    return score < 1 or score > 21
 
 
 def step(s, a):
@@ -74,20 +47,23 @@ def step(s, a):
     :param a: The action: 'stick' or 'hit'
     :return: A new sample state and the associated reward
     """
+    def is_busted(score):
+        return score < MIN_POINTS or score > MAX_POINTS
+
     dealer_first, player = s
 
     if a == HIT:  # player hits
         card = draw_from_deck_with_replacement()
-        if _is_busted(player + card):
+        if is_busted(player + card):
             reward = LOSE
         else:
             player += card
             reward = DRAW
     else:  # a == STICK - player sticks, dealer to play
         dealer = dealer_first
-        while dealer < 17 and not _is_busted(dealer):
+        while dealer < 17 and not is_busted(dealer):
             dealer += draw_from_deck_with_replacement()
-        if _is_busted(dealer):
+        if is_busted(dealer):
             reward = WIN
         elif dealer == player:
             reward = DRAW
