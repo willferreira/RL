@@ -26,20 +26,52 @@ from question1 import step, draw_from_deck_with_replacement
 
 
 def generate_initial_state():
-    # Returns a random initial game state, ie. dealer's show card and initial player card
+    """
+    Returns a random initial game state.
+
+    :return: a tuple (a, b) where a is the dealer's initial card value, and b the player's
+    """
     return draw_from_deck_with_replacement(True), draw_from_deck_with_replacement(True)
 
 
 def draw_action(s, policy):
-    # Draw an action given a state and policy distribution
+    """
+    Draw an action given a state and policy distribution.
+
+    :param s: a game state represented as a tuple (a, b) where a is the
+              dealer's initial card value, and b the player's current card value
+    :param policy: a policy pi(s, a)
+    :return: HIT or STICK, whichever has the higher probability of
+             occurrence in state s according to the policy.
+    """
     return HIT if rd.random() < policy[(s, HIT)] else STICK
 
 
 def is_episode_terminated(r, a):
+    """
+    Returns True if the an episode has terminated.
+
+    :param r: the reward from the latest step in the episode
+    :param a: the action taken
+    :return: True if the an episode has terminated, False otherwise.
+    """
     return a == STICK or r == LOSE
 
 
 def generate_episode(policy):
+    """
+    Returns a generator which can be iterated to reveal
+    successive game steps. Calling yield on this generator
+    will return a 5-tuple: (s, a, r, s1, a1) where:
+        s - the initial state
+        a - the action taken in s
+        r - the reward received
+        s1 - the new state after a is performed
+        a1 - a new action drawn from the policy in state s1
+
+    :param policy: the policy pi(s, a)
+    :return: a game episode generator
+    """
     s = generate_initial_state()
     a = draw_action(s, policy)
 
@@ -56,7 +88,12 @@ def generate_episode(policy):
 
 
 def generate_initial_policy():
-    # Generate the initial (random) ε-soft policy distribution
+    """
+    Generate the initial (random) ε-soft policy distribution
+
+    :return: a dict representing the policy pi(s, a) with
+             pi(s, HIT) = pi(s, STICK) = 0.5 for all states s.
+    """
     policy = {}
     for i in range(1, NUMBER_OF_CARDS+1):
         for j in range(1, MAX_POINTS+1):

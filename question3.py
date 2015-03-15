@@ -25,7 +25,9 @@ from question2 import Easy21MCControl, generate_episode, is_episode_terminated
 
 
 class Easy21Sarsa(Easy21MCControl):
-
+    """
+    Class encapsulating state for Sarsa(lambda) Control in Easy21
+    """
     def __init__(self, lambda_, T=1000, N0=100):
         """
         Initializer
@@ -57,7 +59,6 @@ class Easy21Sarsa(Easy21MCControl):
 
     def run(self):
         t = 0
-
         while t < self.T:
             # Reset eligibility traces
             self.e_trace.clear()

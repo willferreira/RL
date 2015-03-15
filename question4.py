@@ -3,7 +3,7 @@ RL Assignment - Easy21
 @author: William Ferreira
 
 We now consider a simple value function approximator using coarse coding. Use a binary
-feature vector φ(s, a) with 3 ∗ 6 ∗ 2 = 36 features. Each binary feature has a value
+feature vector φ(s, a) with 3 * 6 * 2 = 36 features. Each binary feature has a value
 of 1 iff (s, a) lies within the cuboid of state-space corresponding to that feature,
 and the action corresponding to that feature. The cuboids have the following
 overlapping intervals:
@@ -23,7 +23,154 @@ plot the learning curve of mean-squared error against episode number.
 
                                                                             15 marks
 """
+from collections import defaultdict
+import itertools as it
+import random as rd
+import sys
+import os
+
+from constants import *
+from question1 import step
+from question2 import generate_initial_state, is_episode_terminated, draw_action
+
+_dealer_features = [(1, 4), (4, 7), (7, 10)]
+_player_features = [(1, 6), (4, 9), (7, 12), (10, 15), (13, 18), (16, 21)]
+_action_features = [HIT, STICK]
+_feature_space = list(it.product(_dealer_features, _player_features, _action_features))
 
 
-class Easy21FunctionApprox(object):
-    pass
+def _phi(s, a):
+    """
+    Implements φ(s, a) with 3 * 6 * 2 = 36 features.
+
+    :param s: a game state represented as a tuple (a, b) where a is the
+              dealer's initial card value, and b the player's current card value
+    :param a: an action
+    :return: list of indexes of those features which are switched on for s and a
+    """
+    dealer, player = s
+
+    def contains(i, v):
+        l, u = i
+        return l <= v <= u
+
+    def feature_on(f):
+        d, p, act = f
+        return contains(d, dealer) and contains(p, player) and act == a
+
+    return [i for (i, f) in enumerate(_feature_space) if feature_on(f)]
+
+
+class Easy21LinearFunctionApprox(object):
+    """
+    Class encapsulating state for Sarsa Control with
+    function approximation in Easy21.
+    """
+    def __init__(self, lambda_, T=1000, eta=0.05, alpha=0.01):
+        """
+        Initializer
+
+        :param lambda_: Value of trace weight parameter lambda
+        :param T: No. of episodes (default 1000)
+        :param eta: exploration probability (default 0.05)
+        :param alpha: step-size (default 0.01)
+        """
+        self.lambda_ = lambda_
+        self.T = T
+        self.eta = eta
+        self.alpha = alpha
+        self.theta = [0]*len(_feature_space)
+        self.e_trace = defaultdict(float)
+        self.learning_curve = []
+
+    def q(self, s, a):
+        f_a = _phi(s, a)
+        return sum([self.theta[i] for i in f_a])
+
+    def _choose_action(self, s):
+        if rd.random() < self.eta:
+            return HIT if rd.random() < 0.5 else STICK
+        f = [(a, sum([self.theta[i] for i in _phi(s, a)])) for a in ACTIONS]
+        a, _ = max(f, key=lambda x: x[1])
+        return a
+
+    def _update_theta(self, delta):
+        for i in range(len(_feature_space)):
+            self.theta[i] += self.alpha * delta * self.e_trace[i]
+
+    def extract_q(self):
+        q = {}
+        for i in range(1, NUMBER_OF_CARDS+1):
+            for j in range(1, MAX_POINTS+1):
+                s = i, j
+                for a in ACTIONS:
+                    q[(s, a)] = self.q(s, a)
+        return q
+
+    def run(self):
+        t = 0
+
+        while t < self.T:
+            self.e_trace.clear()
+            s = generate_initial_state()
+            a = self._choose_action(s)
+
+            while True:
+                for i in range(len(_feature_space)):
+                    self.e_trace[i] *= self.lambda_
+
+                f_a = _phi(s, a)
+
+                for i in f_a:
+                    self.e_trace[i] += 1
+
+                s1, r = step(s, a)
+                delta = r - self.q(s, a)
+
+                if is_episode_terminated(r, a):
+                    self._update_theta(delta)
+                    break
+
+                s = s1
+                a = self._choose_action(s)
+                delta += self.q(s, a)
+                self._update_theta(delta)
+            self.learning_curve.append((t, self.extract_q()))
+            t += 1
+        return self
+
+
+if __name__ == '__main__':
+    with open(sys.argv[1]) as f:
+        d = dict([eval(l) for l in f.readlines()])
+
+    def compute_mse(q):
+        mse = 0.0
+        for x, v in d.items():
+            v1 = q.get(x, 0.0)
+            mse += (v - v1)**2
+        return mse
+
+    import datetime as dt
+    s = dt.datetime.now()
+
+    lambdas = [x/10.0 for x in range(0, 11)]
+    results = dict([(lm, Easy21LinearFunctionApprox(lambda_=lm).run()) for lm in lambdas])
+    mse = [(lm, compute_mse(results[lm].extract_q())) for lm in lambdas]
+
+    ts = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    def write_mse(f, mse):
+        f.writelines(['{0:.1f},{1:.2f}\n'.format(x, y) for x, y in mse])
+
+    with open(os.path.join('out', 'LINEAR_MSE_' + ts + '.csv'), 'w') as f:
+        write_mse(f, mse)
+
+    def write_mse_lambda(lm):
+        with open(os.path.join('out', 'LINEAR_MSE_lambda{0:d}_'.format(int(lm)) + ts + '.csv'), 'w') as f:
+            write_mse(f, [(t+1, compute_mse(Q)) for (t, Q) in results[lm].learning_curve])
+
+    write_mse_lambda(0)
+    write_mse_lambda(1)
+
+    print('Elapsed time:', dt.datetime.now() - s)
