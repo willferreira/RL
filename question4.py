@@ -177,18 +177,3 @@ if __name__ == '__main__':
     import numpy as np
     plot_mse(mse, l0, l1, np.arange(20, 50, 5), loc='upper right')
 
-    # ts = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
-    #
-    # def write_mse(f, mse):
-    #     f.writelines(['{0:.1f},{1:.2f}\n'.format(x, y) for x, y in mse])
-    #
-    # with open(os.path.join('out', 'LINEAR_MSE_' + ts + '.csv'), 'w') as f:
-    #     write_mse(f, mse)
-    #
-    # def write_mse_lambda(lm):
-    #     with open(os.path.join('out', 'LINEAR_MSE_lambda{0:d}_'.format(int(lm)) + ts + '.csv'), 'w') as f:
-    #         write_mse(f, [(t+1, compute_mse(Q)) for (t, Q) in results[lm].learning_curve])
-    #
-    # write_mse_lambda(0)
-    # write_mse_lambda(1)
-
