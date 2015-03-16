@@ -19,6 +19,7 @@ episode number.
 import sys
 import os
 from collections import defaultdict
+import argparse
     
 from constants import *
 from question2 import Easy21MCControl, generate_episode, is_episode_terminated
@@ -72,8 +73,37 @@ class Easy21Sarsa(Easy21MCControl):
         return self
 
 
+def plot_mse(mse, lambda0, lambda1, scale, loc='lower right'):
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure()
+    ax = fig.add_subplot(211)
+    ax.plot(*zip(*mse))
+    plt.xlabel('$\lambda$')
+    plt.ylabel('MSE')
+    plt.yticks(scale)
+
+    ax = fig.add_subplot(212)
+    ax.plot(*zip(*lambda0), label='$\lambda=0$')
+    plt.xlabel('Episode')
+    plt.ylabel('MSE')
+    ax.plot(*zip(*lambda1), label='$\lambda=1$')
+    plt.legend(loc=loc)
+
+    plt.show()
+
+
 if __name__ == '__main__':
-    with open(sys.argv[1]) as f:
+    # Run Sarsa(lambda) for Easy21.
+    parser = argparse.ArgumentParser(description='Easy21Sarsa cmd-line arguments.')
+
+    parser.add_argument('--episodes', default=int(1E3), type=int)
+    parser.add_argument('--N0', default=int(1E2), type=int)
+    parser.add_argument('--qdata', default='mc_q.csv', type=str)
+
+    args = parser.parse_args()
+
+    with open(args.qdata) as f:
         d = dict([eval(l) for l in f.readlines()])
 
     def compute_mse(q):
@@ -86,25 +116,16 @@ if __name__ == '__main__':
     import datetime as dt
     s = dt.datetime.now()
 
-    T = 10000
-    N0 = 100
+    T = args.episodes
+    N0 = args.N0
+
     lambdas = [x/10.0 for x in range(0, 11)]
     results = dict([(lm, Easy21Sarsa(lambda_=lm, T=T, N0=N0).run()) for lm in lambdas])
-    mse = [(lm, compute_mse(results[lm].Q)) for lm in lambdas]
-
-    ts = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
-
-    def write_mse(f, mse):
-        f.writelines(['{0:.1f},{1:.2f}\n'.format(x, y) for x, y in mse])
-
-    with open(os.path.join('out', 'SARSA_MSE_{0:d}_{1:d}'.format(T, N0) + ts + '.csv'), 'w') as f:
-        write_mse(f, mse)
-
-    def write_mse_lambda(lm):
-        with open(os.path.join('out', 'SARSA_MSE_lambda{0:d}_{1:d}_{2:d}'.format(int(lm), T, N0) + ts + '.csv'), 'w') as f:
-            write_mse(f, [(t+1, compute_mse(Q)) for (t, Q) in results[lm].learning_curve])
-
-    write_mse_lambda(0)
-    write_mse_lambda(1)
-
     print('Elapsed time:', dt.datetime.now() - s)
+
+    mse = [(lm, compute_mse(results[lm].Q)) for lm in lambdas]
+    l0 = [(t+1, compute_mse(Q)) for (t, Q) in results[0].learning_curve]
+    l1 = [(t+1, compute_mse(Q)) for (t, Q) in results[1].learning_curve]
+
+    import numpy as np
+    plot_mse(mse, l0, l1, np.arange(0, 250, 25))

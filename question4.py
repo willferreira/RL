@@ -26,12 +26,14 @@ plot the learning curve of mean-squared error against episode number.
 from collections import defaultdict
 import itertools as it
 import random as rd
-import sys
 import os
+import argparse
 
 from constants import *
 from question1 import step
-from question2 import generate_initial_state, is_episode_terminated, draw_action
+from question2 import generate_initial_state, is_episode_terminated
+from question3 import plot_mse
+
 
 _dealer_features = [(1, 4), (4, 7), (7, 10)]
 _player_features = [(1, 6), (4, 9), (7, 12), (10, 15), (13, 18), (16, 21)]
@@ -141,7 +143,15 @@ class Easy21LinearFunctionApprox(object):
 
 
 if __name__ == '__main__':
-    with open(sys.argv[1]) as f:
+    # Run Linear Function Approximation for Easy21.
+    parser = argparse.ArgumentParser(description='Easy21LinearFunctionApprox cmd-line arguments.')
+
+    parser.add_argument('--episodes', default=int(1E3), type=int)
+    parser.add_argument('--qdata', default='mc_q.csv', type=str)
+
+    args = parser.parse_args()
+
+    with open(args.qdata) as f:
         d = dict([eval(l) for l in f.readlines()])
 
     def compute_mse(q):
@@ -154,23 +164,31 @@ if __name__ == '__main__':
     import datetime as dt
     s = dt.datetime.now()
 
+    T = args.episodes
+
     lambdas = [x/10.0 for x in range(0, 11)]
-    results = dict([(lm, Easy21LinearFunctionApprox(lambda_=lm).run()) for lm in lambdas])
-    mse = [(lm, compute_mse(results[lm].extract_q())) for lm in lambdas]
-
-    ts = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
-
-    def write_mse(f, mse):
-        f.writelines(['{0:.1f},{1:.2f}\n'.format(x, y) for x, y in mse])
-
-    with open(os.path.join('out', 'LINEAR_MSE_' + ts + '.csv'), 'w') as f:
-        write_mse(f, mse)
-
-    def write_mse_lambda(lm):
-        with open(os.path.join('out', 'LINEAR_MSE_lambda{0:d}_'.format(int(lm)) + ts + '.csv'), 'w') as f:
-            write_mse(f, [(t+1, compute_mse(Q)) for (t, Q) in results[lm].learning_curve])
-
-    write_mse_lambda(0)
-    write_mse_lambda(1)
-
+    results = dict([(lm, Easy21LinearFunctionApprox(T=T, lambda_=lm).run()) for lm in lambdas])
     print('Elapsed time:', dt.datetime.now() - s)
+
+    mse = [(lm, compute_mse(results[lm].extract_q())) for lm in lambdas]
+    l0 = [(t+1, compute_mse(Q)) for (t, Q) in results[0].learning_curve]
+    l1 = [(t+1, compute_mse(Q)) for (t, Q) in results[1].learning_curve]
+
+    import numpy as np
+    plot_mse(mse, l0, l1, np.arange(20, 50, 5), loc='upper right')
+
+    # ts = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
+    #
+    # def write_mse(f, mse):
+    #     f.writelines(['{0:.1f},{1:.2f}\n'.format(x, y) for x, y in mse])
+    #
+    # with open(os.path.join('out', 'LINEAR_MSE_' + ts + '.csv'), 'w') as f:
+    #     write_mse(f, mse)
+    #
+    # def write_mse_lambda(lm):
+    #     with open(os.path.join('out', 'LINEAR_MSE_lambda{0:d}_'.format(int(lm)) + ts + '.csv'), 'w') as f:
+    #         write_mse(f, [(t+1, compute_mse(Q)) for (t, Q) in results[lm].learning_curve])
+    #
+    # write_mse_lambda(0)
+    # write_mse_lambda(1)
+

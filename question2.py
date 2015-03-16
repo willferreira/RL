@@ -17,9 +17,11 @@ from Sutton and Barto’s Blackjack example.
                                                               15 marks
 """
 import os
+import sys
 from collections import defaultdict
 import itertools as it
 import random as rd
+import argparse
 
 from constants import *
 from question1 import step, draw_from_deck_with_replacement
@@ -168,14 +170,56 @@ if __name__ == '__main__':
     # Run Monte-Carlo Control in Easy21 with T=100,000,000 episodes and plot
     # the surface of V∗ (s) = max_a Q∗ (s, a)
     # WARNING: this could take some time to complete.
-    easy21MCC = Easy21MCControl(T=int(1E8), N0=int(1E5))
-    import datetime as dt
-    s = dt.datetime.now()
-    easy21MCC.run()
+    parser = argparse.ArgumentParser(description='Easy21MCControl cmd-line arguments.')
 
-    t = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
-    with open(os.path.join('out', 'MC_V_{0:d}_{1:d}'.format(easy21MCC.T, easy21MCC.N0) + t + '.csv'), 'w') as f:
-        f.writelines(map(lambda s: ','.join(map(str, s)) + '\n', easy21MCC.V))
-    with open(os.path.join('out', 'MC_Q_{0:d}_{1:d}'.format(easy21MCC.T, easy21MCC.N0) + t + '.csv'), 'w') as f:
-        f.writelines(map(lambda s: str(s) + '\n', easy21MCC.Q.items()))
-    print('Elapsed time:', dt.datetime.now() - s)
+    parser.add_argument('--episodes', default=int(1E8), type=int)
+    parser.add_argument('--N0', default=int(1E5), type=int)
+    parser.add_argument('--save', action='store_true')
+    parser.add_argument('--plot', default=None, type=str)
+
+    args = parser.parse_args()
+
+    def plot_v_surface(v):
+        import pandas as pd
+        df = pd.DataFrame(v)
+        df.index = range(1, NUMBER_OF_CARDS+1)
+        df.columns = range(1, MAX_POINTS+1)
+        df = df.ix[:, range(12, 22)]
+
+        from mpl_toolkits.mplot3d import axes3d
+        import matplotlib.pyplot as plt
+        from matplotlib import cm
+        import numpy as np
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        X, Y = np.meshgrid(range(1, 11), range(12, 22))
+        ax.plot_surface (X, Y, df.values.T, cmap=cm.jet, rstride=1, cstride=1)
+        plt.xlabel('Dealer Showing')
+        plt.ylabel('Player Sum')
+        plt.yticks(np.arange(12, 22, 2))
+        plt.show()
+
+    if args.plot is not None:
+        import pandas as pd
+        df = pd.DataFrame.from_csv(args.plot, index_col=None, header=None)
+        plot_v_surface(df)
+    else:
+        T = args.episodes
+        N0 = args.N0
+
+        import datetime as dt
+        s = dt.datetime.now()
+        easy21MCC = Easy21MCControl(T=T, N0=N0)
+        easy21MCC.run()
+
+        if args.save:
+            t = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
+            with open('mc_v_{0:d}_{1:d}_{2:s}.csv'.format(easy21MCC.T, easy21MCC.N0, t), 'w') as f:
+                f.writelines(map(lambda s: ','.join(map(str, s)) + '\n', easy21MCC.V))
+            with open('mc_q_{0:d}_{1:d}_{2:s}.csv'.format(easy21MCC.T, easy21MCC.N0, t), 'w') as f:
+                f.writelines(map(lambda s: str(s) + '\n', easy21MCC.Q.items()))
+        else:
+            plot_v_surface(easy21MCC.V)
+
+        print('Elapsed time:', dt.datetime.now() - s)
