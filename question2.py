@@ -16,8 +16,6 @@ from Sutton and Barto’s Blackjack example.
 
                                                               15 marks
 """
-import os
-import sys
 from collections import defaultdict
 import itertools as it
 import random as rd

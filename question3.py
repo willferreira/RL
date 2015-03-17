@@ -16,8 +16,6 @@ episode number.
 
                                                                 15 marks
 """
-import sys
-import os
 from collections import defaultdict
 import argparse
     
@@ -27,7 +25,8 @@ from question2 import Easy21MCControl, generate_episode, is_episode_terminated
 
 class Easy21Sarsa(Easy21MCControl):
     """
-    Class encapsulating state for Sarsa(lambda) Control in Easy21
+    Class encapsulating state for Sarsa(lambda) Control in Easy21. Policy adjustment
+    is inherited from Easy21MCControl.
     """
     def __init__(self, lambda_, T=1000, N0=100):
         """
@@ -59,6 +58,9 @@ class Easy21Sarsa(Easy21MCControl):
         self.eta[s] = self.N0/(self.N0 + self.N[s])
 
     def run(self):
+        """
+        Run the evaluation.
+        """
         t = 0
         while t < self.T:
             # Reset eligibility traces
@@ -74,6 +76,16 @@ class Easy21Sarsa(Easy21MCControl):
 
 
 def plot_mse(mse, lambda0, lambda1, scale, loc='lower right'):
+    """
+    Draw a plot of the MSE against lambda. Draw a plot of the
+    MSE of the learning curve for lambda = 0,1.
+
+    :param mse: MSE versus lambda
+    :param lambda0: lambda=0 learning curve MSE
+    :param lambda1: lambda=1 learning curve MSE
+    :param scale: scale for y-axis
+    :param loc: location of legend
+    """
     import matplotlib.pyplot as plt
 
     fig = plt.figure()

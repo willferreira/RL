@@ -26,7 +26,6 @@ plot the learning curve of mean-squared error against episode number.
 from collections import defaultdict
 import itertools as it
 import random as rd
-import os
 import argparse
 
 from constants import *
@@ -110,6 +109,9 @@ class Easy21LinearFunctionApprox(object):
         return q
 
     def run(self):
+        """
+        Run the evaluation.
+        """
         t = 0
 
         while t < self.T:
