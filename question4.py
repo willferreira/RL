@@ -2,6 +2,8 @@
 RL Assignment - Easy21
 @author: William Ferreira
 
+Linear Function Approximation in Easy21
+
 We now consider a simple value function approximator using coarse coding. Use a binary
 feature vector φ(s, a) with 3 * 6 * 2 = 36 features. Each binary feature has a value
 of 1 iff (s, a) lies within the cuboid of state-space corresponding to that feature,

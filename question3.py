@@ -3,6 +3,7 @@ RL Assignment - Easy21
 @author: William Ferreira
 
 3 TD Learning in Easy21
+
 Implement Sarsa(λ) in 21s. Initialise the value function to zero.
 Use the same step-size and exploration schedules as in the previous
 section. Run the algorithm with parameter values λ ∈ {0, 0.1, 0.2, ..., 1}.
